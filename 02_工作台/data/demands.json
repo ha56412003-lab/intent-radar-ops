@@ -1,0 +1,37 @@
+[
+  {
+    "question": "带70岁老人去云南方便吗",
+    "count": 5,
+    "tag": "老年友好",
+    "topic": "带老人游云南：每天车程2小时内的路线",
+    "published": false
+  },
+  {
+    "question": "两个人五天大概多少钱",
+    "count": 8,
+    "tag": "价格透明",
+    "topic": "云南5天纯玩到底多少钱（含明细）",
+    "published": false
+  },
+  {
+    "question": "会不会高反",
+    "count": 4,
+    "tag": "高反焦虑",
+    "topic": "按这个顺序走，云南几乎不会高反",
+    "published": false
+  },
+  {
+    "question": "8月/国庆去人多吗",
+    "count": 3,
+    "tag": "季节选择",
+    "topic": "云南各月人流与价格对照表",
+    "published": false
+  },
+  {
+    "question": "纯玩真的不购物吗",
+    "count": 3,
+    "tag": "信任建立",
+    "topic": "我们的团为什么不进店：合同原文+导游制度",
+    "published": true
+  }
+]

@@ -1,0 +1,23 @@
+[
+  {
+    "name": "张三",
+    "platform": "小红书",
+    "account": "@悠哈小张",
+    "daily_limit": 5,
+    "note": "普通号"
+  },
+  {
+    "name": "李四",
+    "platform": "抖音",
+    "account": "@悠哈旅行",
+    "daily_limit": 20,
+    "note": "企业号"
+  },
+  {
+    "name": "王五",
+    "platform": "抖音+视频号",
+    "account": "@悠哈云南",
+    "daily_limit": 20,
+    "note": "企业号"
+  }
+]

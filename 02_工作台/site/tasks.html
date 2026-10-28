@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>派单台 · 获客工作台</title><style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--green:#0F5C45;--green2:#14785a;--gold:#9A7118;--bg:#f4f6f4;--card:#fff;
+--line:#e3e8e4;--txt:#1d2b24;--muted:#7a8a80;--red:#c0392b;--amber:#c98a00}
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--txt);font-size:14px;-webkit-font-smoothing:antialiased}
+a{color:var(--green);text-decoration:none}
+.wrap{display:flex;min-height:100vh}
+/* 侧栏 */
+.side{width:196px;background:var(--green);color:#fff;flex-shrink:0;padding:18px 0;position:sticky;top:0;height:100vh;display:flex;flex-direction:column}
+.logo{padding:0 18px 16px;border-bottom:1px solid rgba(255,255,255,.15);margin-bottom:10px}
+.logo b{font-size:15px;letter-spacing:.3px}
+.logo small{display:block;font-size:10px;color:rgba(255,255,255,.55);letter-spacing:1.4px;margin-top:3px}
+.nav a{display:flex;align-items:center;gap:9px;padding:10px 18px;color:rgba(255,255,255,.78);font-size:13px;border-left:3px solid transparent}
+.nav a:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav a.on{background:rgba(255,255,255,.12);color:#fff;border-left-color:#d4af37;font-weight:600}
+.nav .ic{width:16px;text-align:center;font-size:14px}
+.side .foot{margin-top:auto;padding:12px 18px;font-size:11px;color:rgba(255,255,255,.72);line-height:1.85;
+  border-top:1px solid rgba(255,255,255,.14)}
+.side .foot b{color:#e8c96a;font-weight:700}
+/* 主区 */
+.main{flex:1;padding:22px 26px 40px;min-width:0}
+.hd{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:18px}
+.hd h1{font-size:20px;font-weight:800;color:var(--green)}
+.hd p{font-size:12px;color:var(--muted);margin-top:4px}
+.hd .date{font-size:11px;color:var(--muted)}
+/* 卡片 */
+.grid{display:grid;gap:12px;margin-bottom:18px}
+.g6{grid-template-columns:repeat(6,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g2{grid-template-columns:repeat(2,1fr)}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 15px;position:relative}
+.kpi .lb{font-size:11.5px;color:var(--muted);margin-bottom:6px}
+.kpi .v{font-size:24px;font-weight:800;color:var(--green);line-height:1.1}
+.kpi .v small{font-size:11px;font-weight:400;color:var(--muted);margin-left:3px}
+.kpi .sub{font-size:10.5px;color:var(--muted);margin-top:5px}
+.kpi.key{border-color:#c9b26a;background:linear-gradient(180deg,#fffdf5,#fff)}
+.kpi.key .v{color:var(--gold)}
+.kpi.alert{border-color:#e8b4ae;background:#fff8f7}
+.kpi.alert::after{content:"";position:absolute;left:0;top:10px;bottom:10px;width:4px;background:var(--red);border-radius:0 3px 3px 0}
+.kpi.alert .v{color:var(--red)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin-bottom:16px}
+.card h2{font-size:14px;font-weight:800;color:var(--green);margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.card h2 .tip{font-size:10px;font-weight:400;color:var(--muted)}
+/* 表格 */
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{background:#f0f4f2;color:#4a5d54;font-weight:600;padding:9px 10px;text-align:left;font-size:11px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid #f0f2f1;vertical-align:top;line-height:1.6}
+tr:hover td{background:#fafcfb}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+/* 标签 */
+.tag{display:inline-block;padding:1px 7px;border-radius:3px;font-size:10.5px;font-weight:600;white-space:nowrap}
+.tA{background:#fdecea;color:#b03a2e}
+.tB{background:#fff6e0;color:#9a7118}
+.tR{background:#eee;color:#777}
+.tok{background:#e8f5e9;color:#2e7d32}
+.twait{background:#f0f0f0;color:#777}
+.tdo{background:#e3f2fd;color:#1565c0}
+.tbad{background:#fdecea;color:#b03a2e}
+.bar{height:7px;background:#eef1ef;border-radius:4px;overflow:hidden;min-width:70px;display:inline-block;vertical-align:middle}
+.bar i{display:block;height:100%;background:var(--green);border-radius:4px}
+.empty{color:var(--muted);font-size:12.5px;padding:22px;text-align:center;background:#fafbfa;border-radius:6px}
+.note{font-size:11.5px;color:var(--muted);line-height:1.9;background:#fafbfa;border-left:3px solid #d4af37;padding:10px 14px;border-radius:0 6px 6px 0;margin-top:12px}
+.btn{display:inline-block;padding:6px 13px;background:var(--green);color:#fff;border-radius:5px;font-size:12px;font-weight:600}
+.flow{display:flex;gap:0;margin:6px 0 4px}
+.flow .s{flex:1;min-width:0;border:1px solid var(--line);padding:9px 6px;text-align:center;position:relative;background:#fdfefd}
+.flow .s:not(:last-child)::after{content:"›";position:absolute;right:-7px;top:50%;transform:translateY(-50%);
+  color:#8aa79a;font-size:17px;font-weight:700;z-index:2;line-height:1}
+.flow .s b{display:block;font-size:10.5px;color:var(--green);margin-bottom:2px;white-space:nowrap}
+.flow .s span{font-size:9px;color:var(--muted);line-height:1.4;display:block;white-space:nowrap}
+.flow .s em{display:block;font-size:14px;font-weight:800;color:var(--gold);font-style:normal;margin-top:3px}
+@media(max-width:1200px){.g6{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(2,1fr)}}
+</style></head>
+<body><div class="wrap">
+<aside class="side">
+  <div class="logo"><b>获客工作台</b><small>INTENT RADAR OPS</small></div>
+  <nav class="nav"><a href="index.html" class=""><span class="ic">◎</span>总台</a><a href="radar.html" class=""><span class="ic">📡</span>今日清单</a><a href="tasks.html" class="on"><span class="ic">📋</span>派单台</a><a href="leads.html" class=""><span class="ic">💬</span>私信承接</a><a href="funnel.html" class=""><span class="ic">📊</span>漏斗复盘</a><a href="demands.html" class=""><span class="ic">💡</span>需求池</a><a href="scripts.html" class=""><span class="ic">🗣</span>话术库</a><a href="pack.html" class=""><span class="ic">🎁</span>行业包</a></nav>
+  <div class="foot"><b>● 数据源正常</b><br>data/ 目录 · CSV 丢进去自动汇总<br>最后构建 2026-10-28</div>
+</aside>
+<main class="main">
+  <div class="hd"><div><h1>派单台</h1><p>中端：谁扫哪条、谁快超限额</p></div><div class="date">2026-10-28</div></div>
+  <div class="card"><h2>员工与账号 <span class="tip">限额防封号，别让一个人猛发</span></h2>
+<table><tr><th>员工</th><th>平台</th><th>账号</th><th>派到作品</th><th>已完成</th><th>今日已回</th><th>额度</th></tr><tr>
+<td><b>张三</b></td>
+<td>小红书</td>
+<td>@悠哈小张</td>
+<td class="num">2</td>
+<td class="num">0</td>
+<td class="num">0</td>
+<td><span class="bar"><i style="width:0%;background:var(--green)"></i></span> <span style="font-size:11px">0/5</span></td>
+</tr><tr>
+<td><b>李四</b></td>
+<td>抖音</td>
+<td>@悠哈旅行</td>
+<td class="num">1</td>
+<td class="num">1</td>
+<td class="num">0</td>
+<td><span class="bar"><i style="width:0%;background:var(--green)"></i></span> <span style="font-size:11px">0/20</span></td>
+</tr><tr>
+<td><b>王五</b></td>
+<td>抖音+视频号</td>
+<td>@悠哈云南</td>
+<td class="num">1</td>
+<td class="num">1</td>
+<td class="num">0</td>
+<td><span class="bar"><i style="width:0%;background:var(--green)"></i></span> <span style="font-size:11px">0/20</span></td>
+</tr></table>
+<div class="note">合规红线：小红书普通号 5 人/天、专业号 20 人/天；抖音 24h 内对同一人只能发 1 条。<br>
+超了就会被限流甚至封号——这张表就是为了让你看得见「谁快到线了」。</div>
+</div>
+<div class="card"><h2>派单明细</h2>
+<table><tr><th>作品</th><th>平台</th><th>负责人</th><th>状态</th><th>待扫意向</th></tr><tr><td>云南旅游团4-6人小团｜这篇讲透了</td><td>小红书</td>
+<td>张三</td>
+<td><span class="tag tdo">进行中</span></td>
+<td class="num">32</td></tr><tr><td>大理洱海三天两夜｜带爸妈慢游路线</td><td>抖音</td>
+<td>李四</td>
+<td><span class="tag tok">已完成</span></td>
+<td class="num">23</td></tr><tr><td>云南旅游避坑｜这5个坑90%的人都踩</td><td>抖音</td>
+<td>张三</td>
+<td><span class="tag twait">待派</span></td>
+<td class="num">16</td></tr><tr><td>带70岁老人去云南，这样安排不累</td><td>小红书</td>
+<td><span style="color:#bbb">未派</span></td>
+<td><span class="tag twait">待派</span></td>
+<td class="num">15</td></tr><tr><td>丽江古城住哪区最方便｜本地人说</td><td>抖音</td>
+<td>王五</td>
+<td><span class="tag tok">已完成</span></td>
+<td class="num">28</td></tr></table>
+</div>
+</main></div></body></html>

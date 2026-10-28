@@ -1,0 +1,46 @@
+[
+  {
+    "id": "l001",
+    "date": "2026-10-27",
+    "name": "凯蒂日记",
+    "platform": "抖音",
+    "source_work": "w002",
+    "comment": "一家5口 求攻略",
+    "stage": "已私信",
+    "next": "发行程+问日期",
+    "owner": "李四"
+  },
+  {
+    "id": "l002",
+    "date": "2026-10-27",
+    "name": "一枕槐安",
+    "platform": "小红书",
+    "source_work": "w001",
+    "comment": "两个人五天多少钱",
+    "stage": "待跟进",
+    "next": "报区间价+问预算",
+    "owner": "张三"
+  },
+  {
+    "id": "l003",
+    "date": "2026-10-26",
+    "name": "山野与海",
+    "platform": "抖音",
+    "source_work": "w005",
+    "comment": "带老人会不会高反",
+    "stage": "已加微信",
+    "next": "发防高反行程",
+    "owner": "王五"
+  },
+  {
+    "id": "l004",
+    "date": "2026-10-26",
+    "name": "风吹麦浪",
+    "platform": "抖音",
+    "source_work": "w002",
+    "comment": "8月去合适吗",
+    "stage": "已报价",
+    "next": "等回复，27号跟进",
+    "owner": "李四"
+  }
+]

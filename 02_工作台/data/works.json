@@ -1,0 +1,67 @@
+[
+  {
+    "id": "w001",
+    "date": "2026-10-27",
+    "platform": "小红书",
+    "title": "云南旅游团4-6人小团｜这篇讲透了",
+    "url": "https://www.xiaohongshu.com/explore/demo001",
+    "views": 186000,
+    "comments": 3089,
+    "a_count": 13,
+    "b_count": 19,
+    "staff": "张三",
+    "status": "进行中"
+  },
+  {
+    "id": "w002",
+    "date": "2026-10-27",
+    "platform": "抖音",
+    "title": "大理洱海三天两夜｜带爸妈慢游路线",
+    "url": "https://www.douyin.com/video/demo002",
+    "views": 412000,
+    "comments": 1102,
+    "a_count": 9,
+    "b_count": 14,
+    "staff": "李四",
+    "status": "已完成"
+  },
+  {
+    "id": "w003",
+    "date": "2026-10-27",
+    "platform": "抖音",
+    "title": "云南旅游避坑｜这5个坑90%的人都踩",
+    "url": "https://www.douyin.com/video/demo003",
+    "views": 96000,
+    "comments": 684,
+    "a_count": 5,
+    "b_count": 11,
+    "staff": "张三",
+    "status": "待派"
+  },
+  {
+    "id": "w004",
+    "date": "2026-10-27",
+    "platform": "小红书",
+    "title": "带70岁老人去云南，这样安排不累",
+    "url": "https://www.xiaohongshu.com/explore/demo004",
+    "views": 74000,
+    "comments": 512,
+    "a_count": 7,
+    "b_count": 8,
+    "staff": "",
+    "status": "待派"
+  },
+  {
+    "id": "w005",
+    "date": "2026-10-26",
+    "platform": "抖音",
+    "title": "丽江古城住哪区最方便｜本地人说",
+    "url": "https://www.douyin.com/video/demo005",
+    "views": 238000,
+    "comments": 1590,
+    "a_count": 11,
+    "b_count": 17,
+    "staff": "王五",
+    "status": "已完成"
+  }
+]
