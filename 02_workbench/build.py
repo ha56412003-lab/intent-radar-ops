@@ -830,7 +830,7 @@ document.getElementById("pk-apply").onclick = function () {
 def _find_script(name):
     """在几个可能的位置找母本脚本（兼容发布包结构和开发目录结构）"""
     cands = [
-        ROOT.parent / "01_浏览器脚本" / name,
+        ROOT.parent / "01_browser-scripts" / name,
         ROOT.parent / "意向雷达V1" / name,
         ROOT / name,
     ]
