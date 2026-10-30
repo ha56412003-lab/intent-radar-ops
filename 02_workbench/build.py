@@ -44,10 +44,23 @@ def read_csv_glob(pattern):
     return rows
 
 def read_replies():
-    """雷达导出的回复记录：兼容新文件名（回复记录_员工_日期.csv）和旧文件名（replies_*.csv）"""
+    """回复记录：雷达导出的 CSV（旧方式）+ 工作台里点「已回复」写下的 JSON。"""
     rows = []
     for pat in ("replies*.csv", "回复记录_*.csv"):
         rows.extend(read_csv_glob(pat))
+    p = DATA / "replies.json"
+    if p.exists():
+        try:
+            for r in json.loads(p.read_text(encoding="utf-8")):
+                rows.append({
+                    "等级": r.get("level", "A"),
+                    "员工": r.get("employee", ""),
+                    "平台": r.get("platform", ""),
+                    "原评论": r.get("comment", ""),
+                    "时间": r.get("replied_at", ""),
+                })
+        except Exception as e:
+            print(f"warning: replies.json 读取失败 {e}", file=sys.stderr)
     return rows
 
 def to_int(x):
@@ -56,12 +69,23 @@ def to_int(x):
     except Exception:
         return 0
 
-works = read_json("works.json")
+works = read_json("works.json") if (DATA / "works.json").exists() else read_json("works.demo.json")
 staff = read_json("staff.json")
 leads = read_json("leads.json")
 demands = read_json("demands.json")
 scripts_lib = read_json("scripts.json")
 replies = read_replies()
+# Agent 自动扫描的元信息（最近一次扫了什么、什么时候扫的）
+scan_meta = read_json("scan_meta.json", {})
+# A/B 级评论明细（「待回复清单」用它）+ 已被标记回复的 id
+dispatched = read_json("dispatched.json")
+replied_ids = set()
+_rp = DATA / "replies.json"
+if _rp.exists():
+    try:
+        replied_ids = {r.get("id") for r in json.loads(_rp.read_text(encoding="utf-8"))}
+    except Exception:
+        replied_ids = set()
 
 # 采集器导出的作品清单（works*.csv）→ 合并进清单，状态默认"待派"
 # 按链接去重：json 里已有的、或前面 CSV 已收录过的，不再重复加
@@ -259,7 +283,7 @@ def build_index():
 
 <div class="card"><h2>链路现状 <span class="tip">每一段各用什么东西在跑</span></h2>
 <div class="flow">
-  <div class="s"><b>① 数据端</b><span>人工/周清单</span><em>{work_cnt} 条</em></div>
+  <div class="s"><b>① 数据端</b><span>Agent 自动扫</span><em>{work_cnt} 条</em></div>
   <div class="s"><b>② 派单</b><span>派给谁·状态</span><em>{pending} 待派</em></div>
   <div class="s"><b>③ 雷达扫评</b><span>识别意向</span><em>{intent_all} 条</em></div>
   <div class="s"><b>④ 人工回复</b><span>只回不回发</span><em>{replied_cnt} 条</em></div>
@@ -271,7 +295,7 @@ def build_index():
 
 <div class="grid g2">
 <div class="card"><h2>最近的意向回复 <span class="tip">雷达记录</span></h2>
-{_reply_table(replies[:8]) if replies else '<div class="empty">还没有回复记录。员工用雷达回复后点「已回复」，导出 CSV 丢进 data/ 就会出现在这里。</div>'}
+{_reply_table(replies[:8]) if replies else '<div class="empty">还没有回复记录。员工回复后在工作台标记「已回复」，记录会出现在这里（不用再导 CSV）。</div>'}
 </div>
 <div class="card"><h2>私信线索（待跟进）</h2>
 {_lead_table(leads[:8]) if leads else '<div class="empty">还没有线索进来。有人私信后，在 leads.json 里记一条。</div>'}
@@ -310,7 +334,9 @@ def _lead_table(rows):
 # ============ 页面 2：今日清单（数据端）============
 def build_radar():
     if not works:
-        body = '<div class="empty">今天还没有作品清单。<br><br>做法：刷到/搜到值得扫的作品 → 在 data/works.json 里记一条（链接、标题、评论数）。</div>'
+        body = ('<div class="empty">今天还没有扫描结果。<br><br>'
+                '让 Agent 跑一次雷达任务，它会把扫过的作品和 A/B 意向数自动写进 <code>data/works.json</code>。<br>'
+                '（人工录入 CSV 的方式已不再需要）</div>')
     else:
         trs = ""
         for w in works:
@@ -331,13 +357,86 @@ def build_radar():
 <tr><th>播放</th><th>评论数</th><th>作品</th><th>平台</th><th>A/B 意向</th><th>派给</th><th>状态</th></tr>
 {trs}
 </table>
-<div class="note">扫法：点开作品 → 装了雷达的浏览器自动高亮意向评论 → 逐条回复 → 回到「派单台」更新状态。<br>
-清单数据来源：现在靠人工记（刷到就记一条），后面可接蝉妈妈/新榜 API 自动出。</div>
+<div class="note">这张表由 <b>Agent 自动填写</b>：它扫完评论后把「作品 + A/B 意向数」写进 <code>data/works.json</code>。<br>
+员工的活只剩一步：按 A 级清单逐条回复 → 回到「派单台」更新状态。</div>
 </div>"""
     return page("radar.html", "radar.html", "今日清单", "数据端：今天该扫哪些作品", body)
 
 
 # ============ 页面 3：派单台 ============
+PENDING_JS = """
+document.querySelectorAll(".mark-btn").forEach(function (btn) {
+  btn.onclick = function () {
+    var sel = document.getElementById("who");
+    var who = sel ? sel.value : "";
+    if (!who) { alert("先在上面选「我是」"); return; }
+    btn.disabled = true;
+    btn.textContent = "记录中…";
+    fetch("/api/mark-replied", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: btn.dataset.id, employee: who })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.ok) {
+          btn.textContent = "✓ 已记录";
+          btn.style.background = "#9aa8a1";
+          btn.closest("tr").style.opacity = 0.45;
+          var n = document.getElementById("pending-n");
+          if (n) n.textContent = d.pending;
+        } else {
+          btn.disabled = false;
+          btn.textContent = "已回复";
+          alert(d.error || "记录失败");
+        }
+      })
+      .catch(function () {
+        btn.disabled = false;
+        btn.textContent = "已回复";
+        alert("写不进去：请用「启动工作台.vbs」打开页面（直接双击 HTML 不行）");
+      });
+  };
+});
+"""
+
+
+def _pending_block():
+    """待回复清单：Agent 判出的 A/B 级评论，回完点一下按钮记到人头上。"""
+    if not dispatched:
+        return ('<div class="card"><h2>待回复清单</h2><div class="empty">还没有待回复的评论。<br><br>'
+                '让 Agent 跑一次扫描，A/B 级评论会自动出现在这里。</div></div>')
+    todo = [d for d in dispatched if d.get("id") not in replied_ids]
+    todo.sort(key=lambda d: (d.get("等级") != "A", -int(d.get("分数") or 0)))
+    opts = "".join(f'<option value="{e(s.get("name",""))}">{e(s.get("name",""))}</option>' for s in staff)
+    if not opts:
+        opts = '<option value="">（先去 staff.json 加员工）</option>'
+    trs = ""
+    for d in todo[:60]:
+        lv = d.get("等级", "")
+        cls = "tA" if lv == "A" else "tB"
+        trs += f"""<tr>
+<td><span class="tag {cls}">{e(lv)}</span></td>
+<td>{e(d.get('平台',''))}</td>
+<td><b>{e(d.get('用户',''))}</b></td>
+<td style="line-height:1.6">{e(d.get('评论',''))[:70]}</td>
+<td style="color:var(--muted);font-size:11.5px">{e(d.get('建议话术',''))[:48]}</td>
+<td><button class="mark-btn" data-id="{e(d.get('id',''))}" style="padding:5px 10px;border:none;border-radius:5px;background:var(--green);color:#fff;font-size:11.5px;cursor:pointer;white-space:nowrap">已回复</button></td>
+</tr>"""
+    return f"""<div class="card"><h2>待回复清单 <span class="tip">A/B 级评论 · 回完点右边，自动记到人头上</span></h2>
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:11px;font-size:12.5px;flex-wrap:wrap">
+  <span>我是：</span>
+  <select id="who" style="padding:5px 8px;border:1px solid var(--line);border-radius:5px;font-size:12.5px">{opts}</select>
+  <span style="color:var(--muted);font-size:11.5px">还没回：<b id="pending-n">{len(todo)}</b> 条
+  {('（只显示前 60 条）' if len(todo) > 60 else '')}</span>
+</div>
+<table><tr><th>等级</th><th>平台</th><th>用户</th><th>评论</th><th>建议话术</th><th>操作</th></tr>{trs}</table>
+<div class="note">回复<b>去抖音/小红书 App 用自己的号发</b>——工具不代发（法律和封号红线）。<br>
+发完回到这里点「已回复」，漏斗的回复率才有数。</div>
+<script>{PENDING_JS}</script>
+</div>"""
+
+
 def build_tasks():
     rows = ""
     for s in staff:
@@ -372,7 +471,8 @@ def build_tasks():
 </div>
 <div class="card"><h2>派单明细</h2>
 {'<table><tr><th>作品</th><th>平台</th><th>负责人</th><th>状态</th><th>待扫意向</th></tr>' + trs2 + '</table>' if works else '<div class="empty">暂无作品</div>'}
-</div>"""
+</div>
+{_pending_block()}"""
     return page("tasks.html", "tasks.html", "派单台", "中端：谁扫哪条、谁快超限额", body)
 
 
@@ -409,7 +509,7 @@ def _inbox_card():
     if not inbox:
         return """<div class="card"><h2>私信收件箱 <span class="tip">采集器自动抓的（还没数据）</span></h2>
 <div class="empty">还没有采集数据。<br><br>
-做法：装「获客采集器」脚本 → 打开抖音创作者中心/小红书专业号/视频号后台的私信页面 → 点「采集当前页」→ 导出 CSV 丢进 <code>data/</code> → 重新打开工作台，各平台私信就在这汇总。</div></div>"""
+做法：Agent 打开各平台后台私信页（抖音创作者中心 / 小红书专业号 / 视频号后台）→ 自动采集 → 直接写进 <code>data/</code>，各平台私信就在这里汇总。员工电脑上不需要装任何扩展。</div></div>"""
     # 按平台分组
     by_plat = {}
     for r in inbox:
@@ -566,28 +666,27 @@ PACK_BODY = r"""
   <textarea id="pk-s" rows="10" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;font-size:11.5px;box-sizing:border-box;line-height:1.7;font-family:Consolas,monospace"></textarea>
 </div>
 
-<div class="card"><h2>③ 下载两个包，分别发给两个人</h2>
-<div class="grid g2" style="margin-bottom:0">
+<div class="card"><h2>③ 不用再给员工装任何东西 <span class="tip">扫描已经在 Agent 那边跑完了</span></h2>
+<div style="font-size:12.5px;line-height:1.9">
+以前要客服和运营各装一个油猴脚本、各自导出 CSV、再拖进 <code>data/</code>。<br>
+现在改成：<b>Agent 用 ego(lite) 浏览器自己扫</b>，扫完直接写进 <code>data/works.json</code> —— 员工电脑上<b>不装扩展、不装脚本、不导 CSV</b>。
+</div>
+<div class="grid g2" style="margin:14px 0 0">
   <div style="border:1px solid var(--line);border-radius:8px;padding:14px">
-    <div style="font-size:13px;font-weight:800;color:var(--green);margin-bottom:5px">📡 雷达包 <span style="font-size:10.5px;color:var(--muted);font-weight:400">→ 给客服装</span></div>
-    <div style="font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:10px">
-      扫评论区、高亮意向、生成话术、记录已回、导出 CSV。<br>
-      装在**客服自己**的电脑上（用客服自己的账号）。
+    <div style="font-size:13px;font-weight:800;color:var(--green);margin-bottom:5px">🤖 Agent 端 <span style="font-size:10.5px;color:var(--muted);font-weight:400">→ 装一次，之后全自动</span></div>
+    <div style="font-size:11.5px;color:var(--muted);line-height:1.75">
+      用带 ego(lite) 的扫描器：按本页生成的词库扫关键词下的作品和评论，判 A/B 级，写回工作台。
     </div>
-    <button id="pk-dl-radar" style="width:100%;padding:9px;border:none;border-radius:6px;background:var(--green);color:#fff;font-size:13px;font-weight:700;cursor:pointer">下载雷达包 .user.js</button>
   </div>
   <div style="border:1px solid var(--line);border-radius:8px;padding:14px">
-    <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:5px">📋 采集包 <span style="font-size:10.5px;color:var(--muted);font-weight:400">→ 给运营经理装</span></div>
-    <div style="font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:10px">
-      抓作品清单、抓各平台私信、导出 CSV 喂工作台。<br>
-      装在**运营经理**电脑上，负责每天出清单和派单。
+    <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:5px">👤 员工端 <span style="font-size:10.5px;color:var(--muted);font-weight:400">→ 什么都不装</span></div>
+    <div style="font-size:11.5px;color:var(--muted);line-height:1.75">
+      只看「派单台」上分给自己的 A 级清单，用自己手机回复。发送永远是人手点，工具不代发。
     </div>
-    <button id="pk-dl-coll" style="width:100%;padding:9px;border:none;border-radius:6px;background:var(--gold);color:#fff;font-size:13px;font-weight:700;cursor:pointer">下载采集包 .user.js</button>
   </div>
 </div>
 <div class="note">
-<b>安装方式（和装普通油猴脚本一样）：</b>两个人都要装 Tampermonkey 扩展 → 打开下载的 .user.js → 浏览器会弹出安装页 → 点「安装」。<br>
-<b>装完验收：</b>客服面板标题显示「🎯 <span id="pk-indshow1">行业</span> 意向雷达」，运营面板显示「📡 <span id="pk-indshow2">行业</span> 作品采集」。
+<b>为什么换掉油猴脚本：</b>脚本只在「人开着那个页面」时才扫，人不在就不跑。换成 Agent + ego(lite) 之后，扫描在后台自己跑，人只做「判断」和「回复」这两件机器做不了的事。
 </div>
 </div>
 
@@ -703,52 +802,7 @@ function download(name, text) {
   a.click();
 }
 
-document.getElementById("pk-dl-radar").onclick = function () {
-  if (!PK) { alert("先点「生成行业包」"); return; }
-  const e = readEdited();
-  const block =
-    '  // ⛔ 本段由「获客工作台 · 行业包生成器」生成，改行业只改这一段\n' +
-    '  // 行业：' + PK.ind + (PK.co ? '（' + PK.co + '）' : '') + '\n' +
-    '  const INDUSTRY = ' + JSON.stringify(PK.ind) + ';\n' +
-    '  const PROD_WORDS = ' + jsArr(PK.kws) + ';   // 产品词闸门：提到这些才算意向\n' +
-    '  const STAFF_DEFAULT = "员工";\n' +
-    '  const A_WORDS = ' + jsArr(e.A) + ';\n' +
-    '  const B_WORDS = ' + jsArr(e.B) + ';\n' +
-    '  const RED_WORDS = ' + jsArr(e.R) + ';\n' +
-    '  const SCRIPTS = ' + JSON.stringify(e.scripts, null, 2).replace(/\n/g, "\n  ") + ';\n';
-  const START = "// ==== INDUSTRY-PACK-START ====";
-  const END = "// ==== INDUSTRY-PACK-END ====";
-  const si = RADAR_TEMPLATE.indexOf(START);
-  const ei = RADAR_TEMPLATE.indexOf(END);
-  if (si < 0 || ei < 0) { alert("母本缺少锚点标记，联系罗小黑"); return; }
-  const headEnd = RADAR_TEMPLATE.indexOf("\n", si) + 1;
-  let out = RADAR_TEMPLATE.slice(0, headEnd) + block + "  " + RADAR_TEMPLATE.slice(ei);
-  // 标题 + 描述带上行业名（只改展示，不改逻辑）
-  out = out.replace(/🎯 意向雷达/g, "🎯 " + PK.ind + " 意向雷达");
-  out = out.replace(/@name\s+.*/, "@name         " + PK.ind + " 意向雷达（客服装）");
-  out = out.replace(/@description\s+.*/, "@description  [" + PK.ind + "] 评论区意向识别 + 话术草稿。只读辅助，不代发消息。");
-  download("雷达包_" + PK.ind + "_客服装.user.js", out);
-};
-
-document.getElementById("pk-dl-coll").onclick = function () {
-  if (!PK) { alert("先点「生成行业包」"); return; }
-  if (!PK.plats.length) { alert("至少选一个平台"); return; }
-  const MAP = {
-    douyin: ["https://www.douyin.com/*", "https://douyin.com/*", "https://creator.douyin.com/*", "https://e.douyin.com/*"],
-    xhs: ["https://www.xiaohongshu.com/*", "https://xiaohongshu.com/*", "https://pro.xiaohongshu.com/*", "https://creator.xiaohongshu.com/*"],
-    sph: ["https://channels.weixin.qq.com/*"],
-    ks: ["https://www.kuaishou.com/*", "https://kuaishou.com/*"]
-  };
-  let lines = [];
-  PK.plats.forEach(p => { lines = lines.concat(MAP[p] || []); });
-  const matchBlock = lines.map(l => "// @match        " + l).join("\n");
-  let out = COLL_TEMPLATE.replace(/(\/\/ @match[^\n]*\n)+/, matchBlock + "\n");
-  out = out.replace(/📡 作品清单采集/g, "📡 " + PK.ind + " 作品采集");
-  out = out.replace(/💬 私信采集/g, "💬 " + PK.ind + " 私信采集");
-  out = out.replace(/@name\s+.*/, "@name         " + PK.ind + " 获客采集器（运营装）");
-  out = out.replace(/@description\s+.*/, "@description  [" + PK.ind + "] 抓作品清单 + 抓各平台私信。只读，不发送任何消息。");
-  download("采集包_" + PK.ind + "_运营装.user.js", out);
-};
+// （油猴脚本下载已移除：扫描改由 Agent + ego(lite) 执行）
 
 // ===== 工作台数据文件（换行业时覆盖 data/ 用）=====
 function buildScriptsJSON() {

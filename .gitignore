@@ -13,3 +13,29 @@ desktop.ini
 # 编辑器
 .vscode/
 .idea/
+
+# ===== 以下不入库（含真实客户信息 / 体积大 / 可再生成）=====
+# 真实扫描数据：里面有客户昵称和评论原文，绝不推到公开仓库
+02_workbench/data/works.json
+02_workbench/data/dispatched.json
+02_workbench/data/replies.json
+02_workbench/data/scan_meta.json
+02_workbench/data/*.csv
+02_workbench/data/*.bak_*
+
+# 生成的静态页面（随时 python build.py 重新生成）
+02_workbench/site/
+
+# Agent 包运行产物
+06_agent-skill/out/
+06_agent-skill/data/
+06_agent-skill/.ego-path
+06_agent-skill/__pycache__/
+
+# 大文件：安装包和打好的 zip 另发，不进仓库
+06_agent-skill/install/egoliteSetup.exe
+意向雷达SKILL包_*.zip
+
+# 手工备份
+*.bak.*
+build.py.bak*

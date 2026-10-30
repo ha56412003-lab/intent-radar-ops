@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>获客系统 · 实际流程</title>
+<style>
+  body { color: var(--foreground); font-family: inherit; margin: 0; font-size: 13.5px; line-height: 1.6; }
+  h1 { font-size: 17px; margin: 0 0 2px; }
+  .sub { color: var(--muted-foreground); font-size: 12px; margin-bottom: 16px; }
+  .lane { display: grid; grid-template-columns: 64px 1fr; gap: 12px; margin-bottom: 10px; }
+  .lane-hd { font-size: 11px; color: var(--muted-foreground); text-align: right; padding-top: 12px; letter-spacing: .5px; }
+  .steps { display: flex; flex-direction: column; gap: 8px; }
+  .step { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; position: relative; }
+  .step.bot { border-left: 3px solid #0F5C45; }
+  .step.human { border-left: 3px solid #c98a00; }
+  .step.gap { border-left: 3px solid #c0392b; }
+  .row1 { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .n { font-weight: 800; font-size: 12px; color: var(--muted-foreground); }
+  .t { font-weight: 700; font-size: 13.5px; }
+  .meta { color: var(--muted-foreground); font-size: 11.5px; }
+  .out { font-size: 12px; color: var(--muted-foreground); margin-top: 3px; }
+  .tag { font-size: 10.5px; border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; color: var(--muted-foreground); }
+  .tag.red { color: #c0392b; border-color: #e0b4ae; }
+  .tag.amber { color: #9A7118; border-color: #e0cf9e; }
+  .tag.green { color: #0F5C45; border-color: #a9c9bc; }
+  .legend { display: flex; gap: 14px; margin: 14px 0 6px; font-size: 11.5px; color: var(--muted-foreground); flex-wrap: wrap; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; margin-top: 8px; }
+  th, td { border-bottom: 1px solid var(--border); padding: 6px 8px; text-align: left; }
+  th { color: var(--muted-foreground); font-weight: 500; font-size: 11.5px; }
+  code { font-size: 11.5px; }
+</style>
+</head>
+<body>
+<h1>获客系统 · 装完之后到底怎么跑</h1>
+<div class="sub">一台采集机 + 零安装的客服端 · 每一格都标了「谁做 / 多久 / 卡在哪」</div>
+
+<div class="legend">
+  <span><i class="dot" style="background:#0F5C45"></i>Agent 自动</span>
+  <span><i class="dot" style="background:#c98a00"></i>必须人做（省不掉）</span>
+  <span><i class="dot" style="background:#c0392b"></i>现在还没做（缺口）</span>
+</div>
+
+<div class="lane">
+  <div class="lane-hd">运营经理<br>采集机上</div>
+  <div class="steps">
+    <div class="step human">
+      <div class="row1"><span class="n">00</span><span class="t">装机：ego + SKILL 包</span><span class="tag amber">15 分钟</span><span class="tag red">必须人点</span></div>
+      <div class="out">跑 install_windows.ps1 → 弹 UAC 点「是」→ ego 首次引导点几下。之后这台机器就成了「采集机」。</div>
+    </div>
+    <div class="step human">
+      <div class="row1"><span class="n">01</span><span class="t">填行业包</span><span class="tag amber">10 分钟</span><span class="tag red">现在是手改 JSON</span></div>
+      <div class="out">要填 4 样：行业名、关键词（客户真会说的词）、产品词（闸门）、话术。产出 <code>packs/你的行业.json</code>。</div>
+    </div>
+    <div class="step human">
+      <div class="row1"><span class="n">02</span><span class="t">登录各平台账号</span><span class="tag amber">5 分钟/平台</span><span class="tag red">永远必须人工</span></div>
+      <div class="out">ego 里每个平台开一个标签，手机扫码。登录态存在这台机器的 ego 里，能用一阵（小红书会踢设备）。</div>
+    </div>
+    <div class="step human">
+      <div class="row1"><span class="n">03</span><span class="t">试扫 + 校准词库</span><span class="tag amber">15 分钟起</span><span class="tag red">最花时间但最值</span></div>
+      <div class="out">先扫 2 篇看命中率。A 级不像真客户 → 补口语词重扫。这一步不做，后面全是噪音。</div>
+    </div>
+    <div class="step bot">
+      <div class="row1"><span class="n">04</span><span class="t">定频 → 挂计划任务</span><span class="tag amber">2 分钟</span><span class="tag red">还没做</span></div>
+      <div class="out">建议：抖音 1–2 次/天、小红书 1 次/天（风控）。前提：机器常开 + ego 窗口不能最小化。</div>
+    </div>
+  </div>
+</div>
+
+<div class="lane">
+  <div class="lane-hd">Agent<br>无人值守</div>
+  <div class="steps">
+    <div class="step bot">
+      <div class="row1"><span class="n">05</span><span class="t">扫评论 → 判级 → 写库</span><span class="tag green">全自动</span></div>
+      <div class="out">搜关键词 → 打开内容 → 滚评论 → 按词库判 A/B → 写 <code>data/works.json</code> → 出派单表。</div>
+    </div>
+    <div class="step bot">
+      <div class="row1"><span class="n">06</span><span class="t">派单（分给谁）</span><span class="tag green">自动</span><span class="tag red">现在靠人看表</span></div>
+      <div class="out">A 级清单带上「谁、说了什么、该用哪句」。目前没做自动分配，靠运营按派单表口头/群里分。</div>
+    </div>
+  </div>
+</div>
+
+<div class="lane">
+  <div class="lane-hd">客服<br>什么都不装</div>
+  <div class="steps">
+    <div class="step human">
+      <div class="row1"><span class="n">07</span><span class="t">看清单 → 去平台上手回</span><span class="tag amber">每天 20–30 分钟</span></div>
+      <div class="out">打开工作台「派单台」看分给自己的 A 级。回复<b>在抖音/小红书 App 里用自己手指发</b>——工具永不代发，这是合规红线。</div>
+    </div>
+    <div class="step human">
+      <div class="row1"><span class="n">08</span><span class="t">回工作台标「已回复」</span><span class="tag red">现在没有这个入口</span></div>
+      <div class="out">缺口：工作台能统计回复率，但<b>没有让人标记「我回了」的按钮</b>，现在只能手改 CSV/JSON。这是闭环断点。</div>
+    </div>
+    <div class="step human">
+      <div class="row1"><span class="n">09</span><span class="t">客户进私信 → 记一条线索</span><span class="tag amber">5 分钟</span></div>
+      <div class="out">填 <code>leads.json</code>：客户、平台、阶段、下一步。漏斗复盘的三个率全靠这个。</div>
+    </div>
+  </div>
+</div>
+
+<div class="lane">
+  <div class="lane-hd">老板</div>
+  <div class="steps">
+    <div class="step bot">
+      <div class="row1"><span class="n">10</span><span class="t">看漏斗复盘</span><span class="tag green">每天 1 分钟</span></div>
+      <div class="out">三个率：回复率 → 回复转私信 → 私信转留资。哪个低修哪个，不用问人。</div>
+    </div>
+  </div>
+</div>
+
+<table>
+  <tr><th>你原想法</th><th>实际能不能做到</th></tr>
+  <tr><td>客服端安装「打包了 EGO 的雷达包」</td><td><b>不需要也不该</b>：EGO 是一台采集机上的浏览器，客服零安装，只看派单表</td></tr>
+  <tr><td>初次运行后自动配置需求池和话术库</td><td>话术库随行业包来；<b>需求池必须跑够真量才有</b>（同一问题被问 ≥3 次）</td></tr>
+  <tr><td>在工作台里「点击回复评论」</td><td><b>做不到</b>：回复必须去平台（法律 + 封号），工作台只能给清单和话术</td></tr>
+  <tr><td>安装后自动全流程</td><td>装机 + 扫码 + 校准词库这 3 步<b>永远要人</b>；之后的每日循环才是全自动</td></tr>
+</table>
+</body>
+</html>

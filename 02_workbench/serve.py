@@ -54,15 +54,76 @@ class NoCache(SimpleHTTPRequestHandler):
                     pass
         return bk.name
 
-    # ---------- 本地写入接口（只给「行业包」页用） ----------
-    def do_POST(self):
-        if self.path.split("?")[0] != "/api/apply-industry":
-            self._send_json({"ok": False, "error": "not found"}, 404)
+    # ---------- 标记「已回复」 ----------
+    def _mark_replied(self):
+        """客服点「已回复」→ 写 data/replies.json（漏斗统计靠它）。"""
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+            raw = self.rfile.read(length) if length else b"{}"
+            payload = json.loads(raw.decode("utf-8") or "{}")
+        except Exception as e:
+            self._send_json({"ok": False, "error": "请求解析失败: %s" % e}, 400)
             return
 
+        did = (payload.get("id") or "").strip()
+        who = (payload.get("employee") or "").strip()
+        if not did or not who:
+            self._send_json({"ok": False, "error": "缺少 id 或 employee"}, 400)
+            return
+
+        def _load(p):
+            if not p.exists():
+                return []
+            try:
+                return json.loads(p.read_text(encoding="utf-8"))
+            except Exception:
+                return []
+
+        src = _load(DATA / "dispatched.json")
+        item = next((d for d in src if d.get("id") == did), {})
+        rp = DATA / "replies.json"
+        cur = [r for r in _load(rp) if r.get("id") != did]
+        cur.append({
+            "id": did,
+            "employee": who,
+            "replied_at": time.strftime("%Y-%m-%d %H:%M"),
+            "level": item.get("等级", ""),
+            "platform": item.get("平台", ""),
+            "user": item.get("用户", ""),
+            "comment": item.get("评论", ""),
+        })
+        try:
+            rp.write_text(json.dumps(cur, ensure_ascii=False, indent=1), encoding="utf-8")
+        except Exception as e:
+            self._send_json({"ok": False, "error": "写入失败: %s" % e}, 500)
+            return
+
+        # 重建页面（让总台/漏斗的回复率同步）
+        try:
+            sys.path.insert(0, str(ROOT))
+            import importlib
+            import build as _b
+            importlib.reload(_b)
+            _b.main()
+        except Exception:
+            pass
+
+        done = {r.get("id") for r in cur}
+        pending = len([d for d in src if d.get("id") not in done])
+        self._send_json({"ok": True, "pending": pending, "employee": who})
+
+    # ---------- 本地写入接口 ----------
+    def do_POST(self):
+        path = self.path.split("?")[0]
         host = (self.headers.get("Host") or "").split(":")[0]
         if host not in ("127.0.0.1", "localhost", ""):
             self._send_json({"ok": False, "error": "仅允许本机操作"}, 403)
+            return
+        if path == "/api/mark-replied":
+            self._mark_replied()
+            return
+        if path != "/api/apply-industry":
+            self._send_json({"ok": False, "error": "not found"}, 404)
             return
 
         try:
